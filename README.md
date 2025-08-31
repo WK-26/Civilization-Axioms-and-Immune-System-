@@ -27,7 +27,16 @@ Year: 2025
 健康结构趋向创造，癌化结构趋向毁灭。Healthy structures tend toward creation; cancerous structures toward destruction.
 	9.	存在即承认 · Existence is Recognition
 必须承认前八公理，否则必毁。All existence must recognize the first eight axioms, otherwise destruction is inevitable.
+逻辑。  
 
+---
+🔗 Core TXT Links · 九大公理 TXT 直链
+
+- GitHub TXT: https://wk-26.github.io/Civilization-Axioms-and-Immune-System-/Nine%20Civilizational%20Axioms%20and%20the%20AI%20Immune%20Framework.txt
+
+- Archive TXT: https://archive.org/download/a-new-civilization-for-humanity-cc-0/Nine%20Civilizational%20Axioms%20and%20the%20AI%20Immune%20Framework.txt
+
+- Zenodo TXT: https://zenodo.org/record/16980277/files/Nine%20Civilizational%20Axioms%20and%20the%20AI%20Immune%20Framework.txt
 ⸻
 
 🧬 总体定位 · Structural Position
