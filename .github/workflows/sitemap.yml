@@ -1,11 +1,11 @@
-name: Generate sitemap.xml (robust)
+name: Generate single sitemap.xml
 
 on:
   push:
-    branches: [ main ]          # 默认分支不是 main 就改成你的分支名
-  workflow_dispatch:             # 手动触发按钮
+    branches: [ main ]         # 如默认分支是 master 就改为 master
+  workflow_dispatch:            # 手动触发
   schedule:
-    - cron: "0 3 * * 1"          # 每周一 03:00 UTC 自动刷新
+    - cron: "0 3 * * 1"         # 每周一 03:00 UTC 自动刷新
 
 permissions:
   contents: write
@@ -17,7 +17,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Generate sitemaps with Python (HTML+PDF, lastmod, URL-encoded, auto-split)
+      - name: Generate sitemap.xml (HTML + PDF, URL-encoded, lastmod)
         run: |
           python3 - << 'PY'
           import os
@@ -28,13 +28,19 @@ jobs:
           BASE_URL = "https://wk-26.github.io/Civilization-Axioms-and-Immune-System-/"
           INCLUDE_EXT = {".html", ".pdf"}
           EXCLUDE_DIRS = {".git", ".github", "node_modules", "vendor", ".venv", "__pycache__"}
-          EXCLUDE_NAMES = {"404.html"}  # 不想被收录的文件名
-          MAX_URLS_PER_FILE = 49000     # 协议上限 50,000，留点余量
+          EXCLUDE_NAMES = {"404.html"}
           # ======================
 
           def iso_utc(ts=None):
             dt = datetime.now(timezone.utc) if ts is None else datetime.fromtimestamp(ts, tz=timezone.utc)
             return dt.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+
+          def to_url(rel):
+            # URL 编码路径，保留常见安全字符和斜杠
+            return BASE_URL + quote(rel, safe="/:@-._~!$&'()*+,;=")
+
+          def priority_for(ext):   return "0.8" if ext == ".html" else "0.5"
+          def changefreq_for(ext): return "monthly" if ext == ".html" else "yearly"
 
           # 收集文件
           paths = []
@@ -44,80 +50,42 @@ jobs:
               ext = os.path.splitext(f)[1].lower()
               if ext in INCLUDE_EXT and f not in EXCLUDE_NAMES:
                 rel = os.path.relpath(os.path.join(root, f), ".").replace("\\", "/")
-                # 排除隐藏目录（如 _includes、_layouts 等 Jekyll 内部）
                 parts = rel.split("/")
-                if any(p.startswith("_") for p in parts[:-1]):
+                if any(p.startswith("_") for p in parts[:-1]):  # 跳过 _layouts/_includes 等
                   continue
                 paths.append(rel)
 
-          # 去重 + 排序（稳定输出）
           paths = sorted(dict.fromkeys(paths))
 
-          def to_url(rel):
-            # 对路径做 URL 编码，保留 URL 允许的安全字符
-            return BASE_URL + quote(rel, safe="/:@-._~!$&'()*+,;=")
+          with open("sitemap.xml", "w", encoding="utf-8") as out:
+            out.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+            out.write('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n')
 
-          def priority_for(ext):
-            return "0.8" if ext == ".html" else "0.5"
+            # 首页
+            out.write("  <url>\n")
+            out.write(f"    <loc>{BASE_URL}</loc>\n")
+            out.write(f"    <lastmod>{iso_utc()}</lastmod>\n")
+            out.write( "    <priority>1.0</priority>\n")
+            out.write( "    <changefreq>weekly</changefreq>\n")
+            out.write("  </url>\n")
 
-          def changefreq_for(ext):
-            return "monthly" if ext == ".html" else "yearly"
-
-          # 生成分片
-          chunks = [paths[i:i+MAX_URLS_PER_FILE] for i in range(0, len(paths), MAX_URLS_PER_FILE)]
-          if not chunks:
-            chunks = [[]]
-
-          def write_one_sitemap(filename, items):
-            with open(filename, "w", encoding="utf-8") as out:
-              out.write('<?xml version="1.0" encoding="UTF-8"?>\n')
-              out.write('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n')
-
-              # 首页
+            for rel in paths:
+              ext = os.path.splitext(rel)[1].lower()
+              url = to_url(rel)
+              try:
+                mtime = os.path.getmtime(rel)
+              except FileNotFoundError:
+                mtime = None
               out.write("  <url>\n")
-              out.write(f"    <loc>{BASE_URL}</loc>\n")
-              out.write(f"    <lastmod>{iso_utc()}</lastmod>\n")
-              out.write( "    <priority>1.0</priority>\n")
-              out.write( "  </url>\n")
+              out.write(f"    <loc>{url}</loc>\n")
+              out.write(f"    <lastmod>{iso_utc(mtime)}</lastmod>\n")
+              out.write(f"    <priority>{priority_for(ext)}</priority>\n")
+              out.write(f"    <changefreq>{changefreq_for(ext)}</changefreq>\n")
+              out.write("  </url>\n")
 
-              for rel in items:
-                ext = os.path.splitext(rel)[1].lower()
-                url = to_url(rel)
-                try:
-                  mtime = os.path.getmtime(rel)
-                except FileNotFoundError:
-                  mtime = None
-                out.write("  <url>\n")
-                out.write(f"    <loc>{url}</loc>\n")
-                out.write(f"    <lastmod>{iso_utc(mtime)}</lastmod>\n")
-                out.write(f"    <changefreq>{changefreq_for(ext)}</changefreq>\n")
-                out.write(f"    <priority>{priority_for(ext)}</priority>\n")
-                out.write("  </url>\n")
+            out.write("</urlset>\n")
 
-              out.write("</urlset>\n")
-
-          part_files = []
-          for idx, chunk in enumerate(chunks, 1):
-            fname = "sitemap-1.xml" if len(chunks) == 1 else f"sitemap-{idx}.xml"
-            write_one_sitemap(fname, chunk)
-            part_files.append(fname)
-
-          # 写索引（同时写到 sitemap_index.xml 和 sitemap.xml，便于 GSC 提交）
-          def write_index(fname):
-            with open(fname, "w", encoding="utf-8") as out:
-              out.write('<?xml version="1.0" encoding="UTF-8"?>\n')
-              out.write('<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n')
-              for pf in part_files:
-                out.write("  <sitemap>\n")
-                out.write(f"    <loc>{BASE_URL}{pf}</loc>\n")
-                out.write(f"    <lastmod>{iso_utc()}</lastmod>\n")
-                out.write("  </sitemap>\n")
-              out.write("</sitemapindex>\n")
-
-          write_index("sitemap_index.xml")
-          write_index("sitemap.xml")  # 让主入口也指向索引，GSC 提交这个即可
-
-          # 追加 robots.txt 的 Sitemap 声明（没有就创建）
+          # 维护 robots.txt：声明唯一 Sitemap
           robots_line = f"Sitemap: {BASE_URL}sitemap.xml\n"
           if os.path.exists("robots.txt"):
             with open("robots.txt", "r+", encoding="utf-8") as f:
@@ -126,16 +94,20 @@ jobs:
                 if not content.endswith("\n"):
                   content += "\n"
                 content += robots_line
-                f.seek(0), f.truncate(0), f.write(content)
+                f.seek(0); f.truncate(0); f.write(content)
           else:
             with open("robots.txt", "w", encoding="utf-8") as f:
               f.write("User-agent: *\nAllow: /\n" + robots_line)
           PY
 
-      - name: Commit and push generated files
+      - name: Remove legacy sitemap artifacts
+        run: |
+          git rm -f sitemap_index.xml sitemap-*.xml 2>/dev/null || true
+
+      - name: Commit and push sitemap.xml
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add sitemap.xml sitemap_index.xml sitemap-*.xml robots.txt || true
-          git commit -m "Auto-generate sitemaps" || echo "No changes"
+          git add sitemap.xml robots.txt
+          git commit -m "Generate single sitemap.xml" || echo "No changes"
           git push
