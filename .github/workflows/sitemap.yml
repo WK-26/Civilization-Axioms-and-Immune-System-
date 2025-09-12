@@ -2,8 +2,13 @@ name: Generate sitemap.xml
 
 on:
   push:
-    branches:
-      - main   # 如果你的默认分支是 master，就改成 master
+    branches: [ main ]     # 如果默认分支是 master，改成 master
+  workflow_dispatch:        # 手动触发按钮
+  schedule:
+    - cron: "0 3 * * 1"     # 每周一 03:00 UTC 自动刷新
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -12,27 +17,59 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Generate sitemap.xml
+      - name: Generate sitemap.xml with Python (HTML + PDF, lastmod, URL-encoded)
         run: |
-          echo '<?xml version="1.0" encoding="UTF-8"?>' > sitemap.xml
-          echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' >> sitemap.xml
+          python3 - << 'PY'
+          import os, time
+          from datetime import datetime, timezone
+          from urllib.parse import quote
 
-          # 添加首页
-          echo "  <url><loc>https://wk-26.github.io/Civilization-Axioms-and-Immune-System-/</loc></url>" >> sitemap.xml
+          BASE_URL = "https://wk-26.github.io/Civilization-Axioms-and-Immune-System-/"
+          INCLUDE_EXT = {".html", ".pdf"}
+          EXCLUDE_DIRS = {".git", ".github", "node_modules", "vendor"}
 
-          # 遍历仓库所有 html 和 pdf 文件
-          for file in $(find . -type f \( -name "*.html" -o -name "*.pdf" \)); do
-            # 去掉前导 ./ 
-            clean=${file#./}
-            echo "  <url><loc>https://wk-26.github.io/Civilization-Axioms-and-Immune-System-/$clean</loc></url>" >> sitemap.xml
-          done
+          def iso_utc(ts=None):
+            dt = datetime.now(timezone.utc) if ts is None else datetime.fromtimestamp(ts, tz=timezone.utc)
+            return dt.strftime("%Y-%m-%dT%H:%M:%S+00:00")
 
-          echo '</urlset>' >> sitemap.xml
+          files = []
+          for root, dirs, fnames in os.walk("."):
+            dirs[:] = [d for d in dirs if d not in EXCLUDE_DIRS and not d.startswith(".git")]
+            for f in fnames:
+              ext = os.path.splitext(f)[1].lower()
+              if ext in INCLUDE_EXT:
+                rel = os.path.relpath(os.path.join(root, f), ".").replace("\\", "/")
+                files.append(rel)
+
+          files = sorted(files)
+
+          with open("sitemap.xml", "w", encoding="utf-8") as out:
+            out.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+            out.write('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n')
+
+            # 首页
+            out.write("  <url>\n")
+            out.write(f"    <loc>{BASE_URL}</loc>\n")
+            out.write(f"    <lastmod>{iso_utc()}</lastmod>\n")
+            out.write("    <priority>1.0</priority>\n")
+            out.write("  </url>\n")
+
+            for rel in files:
+              url = BASE_URL + quote(rel, safe="/")
+              mtime = os.path.getmtime(rel)
+              out.write("  <url>\n")
+              out.write(f"    <loc>{url}</loc>\n")
+              out.write(f"    <lastmod>{iso_utc(mtime)}</lastmod>\n")
+              out.write("    <priority>0.8</priority>\n")
+              out.write("  </url>\n")
+
+            out.write("</urlset>\n")
+          PY
 
       - name: Commit and push sitemap.xml
         run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "actions@github.com"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add sitemap.xml
           git commit -m "Auto-update sitemap.xml" || echo "No changes"
           git push
