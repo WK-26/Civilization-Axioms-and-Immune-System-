@@ -36,7 +36,7 @@ Year: 2025
 
 - Archive TXT: https://archive.org/download/a-new-civilization-for-humanity-cc-0/Nine%20Civilizational%20Axioms%20and%20the%20AI%20Immune%20Framework.txt
 
-- Zenodo TXT: https://zenodo.org/record/16980277/files/Nine%20Civilizational%20Axioms%20and%20the%20AI%20Immune%20Framework.txt
+- Zenodo md: https://zenodo.org/record/17160680/files/nine-civilizational-axioms-en.md
 ⸻
 
 🧬 总体定位 · Structural Position
