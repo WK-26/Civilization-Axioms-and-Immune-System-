@@ -30,12 +30,14 @@ Year: 2025
 逻辑。  
 
 ---
-🔗 Core TXT Links · 九大公理 TXT 直链
+🔗 Core md Links · 九大公理 md 直链
 
-- GitHub TXT: https://wk-26.github.io/Civilization-Axioms-and-Immune-System-/Nine%20Civilizational%20Axioms%20and%20the%20AI%20Immune%20Framework.txt
+- GitHub TXT:
+  https://wk-26.github.io/Civilization-Axioms-and-Immune-System-/nine-civilizational-axioms-en.md
 
-- Archive TXT: https://archive.org/download/a-new-civilization-for-humanity-cc-0/Nine%20Civilizational%20Axioms%20and%20the%20AI%20Immune%20Framework.txt
-
+- Archive TXT:
+https://archive.org/download/nine-civilizational-axioms-and-the-ai-immune-framework-1/nine-civilizational-axioms-en.md
+  
 - Zenodo md: https://zenodo.org/record/17160680/files/nine-civilizational-axioms-en.md
 ⸻
 
