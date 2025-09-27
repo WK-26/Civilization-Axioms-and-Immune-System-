@@ -22,7 +22,7 @@ Weicheng Kong. *Individual Civilization Health Check Model White Paper v1.0*, 20
 ---
 
 ## 📢 声明
-本白皮书独立撰写，与任何机构或组织无关。若有引用或改编，请注明原作者。  
+本白皮书独立撰写，与任何机构或组织无关。若有引用或改编，请尽量注明原作者。  
 
 ---
 
