@@ -281,7 +281,6 @@
 
 You think you
 
-```md
 # Personal vs Personal Structural Collision Model  
 **— The Smallest Unit of All Civilizational Conflict (English Edition)**
 
